@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Well Analysis Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 30px;
+            border-radius: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 3rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+        }
+
+        .controls-section {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-group {
+            display: flex;
+            gap: 25px;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 700;
+            color: white;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        select {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: white;
+            font-size: 1.05rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        select option {
+            background: #2a5298;
+            color: white;
+        }
+
+        .btn {
+            padding: 16px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            box-shadow: 0 8px 25px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(245, 87, 108, 0.6);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.4s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-header h3 {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: white;
+        }
+
+        .icon-primary { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .icon-success { background: linear-gradient(135deg, #4ecdc4, #44a08d); }
+        .icon-warning { background: linear-gradient(135deg, #f093fb, #f5576c); }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-5px);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .well-details-section {
+            grid-column: 1 / -1;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin-top: 25px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 60px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .loading.show { display: block; }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.1));
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, rgba(245, 87, 108, 0.2), rgba(245, 87, 108, 0.1));
+            color: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(245, 87, 108, 0.3);
+        }
+
+        .test-history {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid;
+        }
+
+        .history-item.pass { border-left-color: #4ecdc4; }
+        .history-item.fail { border-left-color: #f5576c; }
+
+        .ml-predictions {
+            background: linear-gradient(135deg, rgba(240, 147, 251, 0.1), rgba(245, 87, 108, 0.05));
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            border: 1px solid rgba(240, 147, 251, 0.3);
+        }
+
+        .prediction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .prediction-item:last-child { border-bottom: none; }
+
+        .prediction-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+        }
+
+        .prediction-value {
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .control-group { flex-direction: column; }
+            .form-group { min-width: 100%; }
+            .header h1 { font-size: 2.2rem; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .fade-in { animation: fadeInUp 0.6s ease-out; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1><i class="fas fa-oil-well"></i> Well Analysis Dashboard</h1>
+            <p>Advanced predictive analytics for well integrity management & optimization</p>
+        </div>
+
+        <div class="controls-section">
+            <div class="control-group">
+                <div class="form-group">
+                    <label for="assetSelect">
+                        <i class="fas fa-industry"></i> Select Asset
+                    </label>
+                    <select id="assetSelect">
+                        <option value="">Choose an asset...</option>
+                        {% for asset in assets %}
+                        <option value="{{ asset }}">{{ asset }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="wellSelect">
+                        <i class="fas fa-oil-well"></i> Select Well
+                    </label>
+                    <select id="wellSelect" disabled>
+                        <option value="">First select an asset...</option>
+                    </select>
+                </div>
+                <button class="btn btn-secondary" onclick="retrainModels()">
+                    <i class="fas fa-sync-alt"></i> Retrain ML Models
+                </button>
+            </div>
+        </div>
+
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            <p>Loading analysis data...</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card" id="assetOverview">
+                <div class="card-header">
+                    <div class="card-icon icon-primary">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3>Asset Overview</h3>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Select an asset to view its comprehensive overview and performance metrics.
+                </div>
+            </div>
+
+            <div class="card" id="assetStats">
+                <div class="card-header">
+                    <div class="card-icon icon-success">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3>Performance Statistics</h3>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Detailed asset statistics and KPIs will appear here after selection.
+                </div>
+            </div>
+
+            <div class="card well-details-section" id="wellDetails">
+                <div class="card-header">
+                    <div class="card-icon icon-warning">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <h3>Well Analysis & Predictions</h3>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Select a well to view detailed analysis, test history, and advanced ML predictions.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAsset = null;
+        let currentWell = null;
+        let testHistoryChart = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard initialized');
+        });
+
+        // Asset selection handler
+        document.getElementById('assetSelect').addEventListener('change', function() {
+            const selectedAsset = this.value;
+            if (selectedAsset) {
+                currentAsset = selectedAsset;
+                loadAssetData(selectedAsset);
+            } else {
+                resetDashboard();
+            }
+        });
+
+        // Well selection handler
+        document.getElementById('wellSelect').addEventListener('change', function() {
+            const selectedWell = this.value;
+            if (selectedWell && currentAsset) {
+                currentWell = selectedWell;
+                loadWellData(currentAsset, selectedWell);
+            }
+        });
+
+        async function loadAssetData(assetName) {
+            showLoading();
+            
+            try {
+                const response = await fetch(`/api/asset/${encodeURIComponent(assetName)}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const assetData = await response.json();
+                
+                if (assetData && assetData.asset_name) {
+                    updateAssetOverview(assetData);
+                    updateAssetStats(assetData);
+                    updateWellsList(assetData.wells || []);
+                } else {
+                    throw new Error('Invalid asset data received');
+                }
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading asset data:', error);
+                showError(`Failed to load data for ${assetName}. Please check if the asset exists.`);
+                hideLoading();
+            }
+        }
+
+        async function loadWellData(assetName, wellName) {
+            showLoading();
+            
+            try {
+                const response = await fetch(`/api/well/${encodeURIComponent(assetName)}/${encodeURIComponent(wellName)}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const wellData = await response.json();
+                
+                if (wellData && wellData.well_name) {
+                    updateWellDetails(wellData);
+                } else {
+                    throw new Error('Invalid well data received');
+                }
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading well data:', error);
+                showError(`Failed to load data for ${wellName}.`);
+                hideLoading();
+            }
+        }
+
+        function updateAssetOverview(data) {
+            const overviewCard = document.getElementById('assetOverview');
+            overviewCard.innerHTML = `
+                <div class="card-header">
+                    <div class="card-icon icon-primary">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3>Asset Overview - ${data.asset_name}</h3>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${data.total_wells || 0}</div>
+                        <div class="stat-label">Total Wells</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${data.total_tests || 0}</div>
+                        <div class="stat-label">Total Tests</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${(data.success_rate || 0).toFixed(1)}%</div>
+                        <div class="stat-label">Success Rate</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${Math.round(data.optimal_days || 0)}</div>
+                        <div class="stat-label">Optimal Days</div>
+                    </div>
+                </div>
+            `;
+            overviewCard.classList.add('fade-in');
+        }
+
+        function updateAssetStats(data) {
+            const statsCard = document.getElementById('assetStats');
+            const successTests = data.success_tests || 0;
+            const failedTests = data.failed_tests || 0;
+            
+            statsCard.innerHTML = `
+                <div class="card-header">
+                    <div class="card-icon icon-success">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3>Performance Statistics</h3>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${successTests}</div>
+                        <div class="stat-label">Passed Tests</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${failedTests}</div>
+                        <div class="stat-label">Failed Tests</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${(data.failure_rate || 0).toFixed(1)}%</div>
+                        <div class="stat-label">Failure Rate</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="assetChart"></canvas>
+                </div>
+            `;
+            
+            if (successTests > 0 || failedTests > 0) {
+                const ctx = document.getElementById('assetChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Passed Tests', 'Failed Tests'],
+                        datasets: [{
+                            data: [successTests, failedTests],
+                            backgroundColor: ['#4ecdc4', '#f5576c'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: 'white',
+                                    font: { size: 14, weight: 'bold' },
+                                    padding: 20
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            statsCard.classList.add('fade-in');
+        }
+
+        function updateWellsList(wells) {
+            const wellSelect = document.getElementById('wellSelect');
+            wellSelect.innerHTML = '<option value="">Choose a well...</option>';
+            wellSelect.disabled = false;
+            
+            wells.forEach(well => {
+                const option = document.createElement('option');
+                option.value = well;
+                option.textContent = well;
+                wellSelect.appendChild(option);
+            });
+        }
+
+        function updateWellDetails(data) {
+            const wellCard = document.getElementById('wellDetails');
+            
+            wellCard.innerHTML = `
+                <div class="card-header">
+                    <div class="card-icon icon-warning">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <h3>Well Analysis - ${data.well_name}</h3>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${data.total_tests || 0}</div>
+                        <div class="stat-label">Total Tests</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${data.failed_tests || 0}</div>
+                        <div class="stat-label">Failed Tests</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${(data.failure_rate || 0).toFixed(1)}%</div>
+                        <div class="stat-label">Failure Rate</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${Math.round(data.optimal_days || 0)}</div>
+                        <div class="stat-label">Optimal Days</div>
+                    </div>
+                </div>
+                
+                <div class="ml-predictions">
+                    <h4 style="color: white; margin-bottom: 15px;">
+                        <i class="fas fa-brain"></i> ML Predictions
+                    </h4>
+                    <div class="prediction-item">
+                        <span class="prediction-label">ML Optimal Interval:</span>
+                        <span class="prediction-value">${Math.round(data.ml_optimal_days || 0)} days</span>
+                    </div>
+                    <div class="prediction-item">
+                        <span class="prediction-label">ML Predicted Failure Rate:</span>
+                        <span class="prediction-value">${(data.ml_failure_rate || 0).toFixed(1)}%</span>
+                    </div>
+                    <div class="prediction-item">
+                        <span class="prediction-label">Last Test Date:</span>
+                        <span class="prediction-value">${data.last_test_date || 'N/A'}</span>
+                    </div>
+                    <div class="prediction-item">
+                        <span class="prediction-label">Next Due Date:</span>
+                        <span class="prediction-value">${data.next_due_date || 'N/A'}</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 25px;">
+                    <h4 style="color: white; margin-bottom: 15px;">
+                        <i class="fas fa-history"></i> Test History
+                    </h4>
+                    <div class="test-history">
+                        ${generateTestHistory(data.test_history || [])}
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="wellChart"></canvas>
+                </div>
+            `;
+            
+            if (data.test_history && data.test_history.length > 0) {
+                createTestHistoryChart(data.test_history);
+            }
+            
+            wellCard.classList.add('fade-in');
+        }
+
+        function generateTestHistory(testHistory) {
+            if (!testHistory || testHistory.length === 0) {
+                return '<div class="alert alert-info">No test history available for this well.</div>';
+            }
+            
+            return testHistory.map(test => `
+                <div class="history-item ${test.result === 'P' ? 'pass' : 'fail'}">
+                    <div>
+                        <strong>${test.date}</strong><br>
+                        <small>${test.test_type || 'Standard'}</small>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="stat-value" style="font-size: 1rem;">
+                            ${test.result === 'P' ? 'PASS' : 'FAIL'}
+                        </span><br>
+                        <small style="color: rgba(255,255,255,0.7);">
+                            ${test.start_pressure ? test.start_pressure.toFixed(1) : 'N/A'} - 
+                            ${test.finish_pressure ? test.finish_pressure.toFixed(1) : 'N/A'} psi
+                        </small>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function createTestHistoryChart(testHistory) {
+            const ctx = document.getElementById('wellChart');
+            if (!ctx) return;
+            
+            if (testHistoryChart) {
+                testHistoryChart.destroy();
+            }
+            
+            const dates = testHistory.map(test => test.date);
+            const startPressures = testHistory.map(test => test.start_pressure || 0);
+            const finishPressures = testHistory.map(test => test.finish_pressure || 0);
+            
+            testHistoryChart = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'Start Pressure',
+                            data: startPressures,
+                            borderColor: '#4ecdc4',
+                            backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Finish Pressure',
+                            data: finishPressures,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white',
+                                font: { size: 12, weight: 'bold' }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: 'rgba(255, 255, 255, 0.8)', maxTicksLimit: 6 },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: 'rgba(255, 255, 255, 0.8)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showLoading() {
+            document.getElementById('loadingIndicator').classList.add('show');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingIndicator').classList.remove('show');
+        }
+
+        function showError(message) {
+            const errorHtml = `
+                <div class="alert alert-error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    ${message}
+                </div>
+            `;
+            
+            const overviewCard = document.getElementById('assetOverview');
+            overviewCard.innerHTML = `
+                <div class="card-header">
+                    <div class="card-icon icon-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h3>Error</h3>
+                </div>
+                ${errorHtml}
+            `;
+        }
+
+        function resetDashboard() {
+            currentAsset = null;
+            currentWell = null;
+            
+            document.getElementById('assetOverview').innerHTML = `
+                <div class="card-header">
+                    <div class="card-icon icon-primary">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3>Asset Overview</h3>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Select an asset to view its comprehensive overview and performance metrics.
+                </div>
+            `;
+            
+            document.getElementById('assetStats').innerHTML = `
+                <div class="card-header">
+                    <div class="card-icon icon-success">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3>Performance Statistics</h3>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Detailed asset statistics and KPIs will appear here after selection.
+                </div>
+            `;
+            
+            document.getElementById('wellDetails').innerHTML = `
+                <div class="card-header">
+                    <div class="card-icon icon-warning">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <h3>Well Analysis & Predictions</h3>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Select a well to view detailed analysis, test history, and advanced ML predictions.
+                </div>
+            `;
+            
+            // Reset well dropdown
+            const wellSelect = document.getElementById('wellSelect');
+            wellSelect.innerHTML = '<option value="">First select an asset...</option>';
+            wellSelect.disabled = true;
+            
+            // Destroy existing chart if it exists
+            if (testHistoryChart) {
+                testHistoryChart.destroy();
+                testHistoryChart = null;
+            }
+        }
+
+        async function retrainModels() {
+            showLoading();
+            try {
+                const response = await fetch('/api/retrain');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const result = await response.json();
+                
+                // Show success message
+                const successAlert = document.createElement('div');
+                successAlert.className = 'alert alert-info';
+                successAlert.innerHTML = `
+                    <i class="fas fa-check-circle"></i>
+                    ${result.message || 'ML models retrained successfully!'}
+                `;
+                
+                // Insert the alert at the top of the dashboard
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                dashboardContainer.insertBefore(successAlert, dashboardContainer.children[1]);
+                
+                // Remove the alert after 5 seconds
+                setTimeout(() => {
+                    successAlert.remove();
+                }, 5000);
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error retraining models:', error);
+                showError('Failed to retrain ML models. Please try again.');
+                hideLoading();
+            }
+        }
+
+        // Initialize the dashboard on page load
+        async function initializeDashboard() {
+            try {
+                const response = await fetch('/api/assets');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const assets = await response.json();
+                
+                const assetSelect = document.getElementById('assetSelect');
+                assetSelect.innerHTML = '<option value="">Choose an asset...</option>';
+                
+                assets.forEach(asset => {
+                    const option = document.createElement('option');
+                    option.value = asset;
+                    option.textContent = asset;
+                    assetSelect.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Error loading assets:', error);
+                showError('Failed to load assets. Please check your connection and try again.');
+            }
+        }
+
+        // Call initialization when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard initialized');
+            initializeDashboard();
+        });
+
+        // Add some utility functions for better UX
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+
+        function formatNumber(number, decimals = 1) {
+            if (number === null || number === undefined) return 'N/A';
+            return Number(number).toFixed(decimals);
+        }
+
+        // Add keyboard shortcuts for better accessibility
+        document.addEventListener('keydown', function(event) {
+            // Alt + R to retrain models
+            if (event.altKey && event.key === 'r') {
+                event.preventDefault();
+                retrainModels();
+            }
+            
+            // Alt + H to go home/reset
+            if (event.altKey && event.key === 'h') {
+                event.preventDefault();
+                document.getElementById('assetSelect').value = '';
+                resetDashboard();
+            }
+        });
+
+        // Add smooth scrolling for better UX
+        function smoothScrollTo(element) {
+            element.scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+
+        // Add window resize handler to make charts responsive
+        window.addEventListener('resize', function() {
+            if (testHistoryChart) {
+                testHistoryChart.resize();
+            }
+        });
+
+        // Enhanced error handling with retry mechanism
+        async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    
+                    // Wait before retrying (exponential backoff)
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+                }
+            }
+        }
+
+        // Add performance monitoring
+        function logPerformance(action, startTime) {
+            const endTime = performance.now();
+            const duration = endTime - startTime;
+            console.log(`${action} took ${duration.toFixed(2)} milliseconds`);
+        }
+
+        // Add animation helpers
+        function animateValue(element, start, end, duration = 1000) {
+            const startTime = performance.now();
+            
+            function updateValue(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const current = start + (end - start) * progress;
+                element.textContent = Math.round(current);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateValue);
+                }
+            }
+            
+            requestAnimationFrame(updateValue);
+        }
+
+        // Add data export functionality
+        function exportData(data, filename) {
+            const jsonStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([jsonStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = filename;
+            link.click();
+            
+            URL.revokeObjectURL(link.href);
+        }
+
+        // Add tooltips for better user experience
+        function addTooltip(element, text) {
+            element.setAttribute('title', text);
+            element.style.cursor = 'help';
+        }
+
+        // Initialize tooltips for key elements
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add tooltips to stat items
+            setTimeout(() => {
+                const statItems = document.querySelectorAll('.stat-item');
+                statItems.forEach(item => {
+                    const label = item.querySelector('.stat-label');
+                    if (label) {
+                        const labelText = label.textContent;
+                        let tooltipText = '';
+                        
+                        switch(labelText) {
+                            case 'Success Rate':
+                                tooltipText = 'Percentage of tests that passed successfully';
+                                break;
+                            case 'Failure Rate':
+                                tooltipText = 'Percentage of tests that failed';
+                                break;
+                            case 'Optimal Days':
+                                tooltipText = 'Recommended interval between tests based on historical data';
+                                break;
+                            case 'Total Tests':
+                                tooltipText = 'Total number of tests conducted';
+                                break;
+                        }
+                        
+                        if (tooltipText) {
+                            addTooltip(item, tooltipText);
+                        }
+                    }
+                });
+            }, 1000);
+        });
+
+        console.log('Well Analysis Dashboard loaded successfully');
+    </script>
+</body>
+</html>
