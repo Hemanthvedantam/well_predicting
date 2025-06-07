@@ -10,6 +10,7 @@ import os
 import threading
 import warnings
 warnings.filterwarnings('ignore')
+import openpyxl
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -36,7 +37,7 @@ def load_and_process_data():
         # Create sample data if file doesn't exist
         raise FileNotFoundError(f"The data file '{csv_path}' was not found. Please ensure it is placed correctly.")
     
-    df_data = pd.read_csv(csv_path)
+    df_data = pd.read_xlsx(csv_path)
     
     # Clean column names
     df_data.columns = df_data.columns.str.strip()
