@@ -30,26 +30,19 @@ scaler_failure = None
 def load_and_process_data():
     """Load and process the CSV data with missing value handling"""
     global df_data, all_assets, asset_well_map, well_asset_map
-    
-    # Read the CSV data
+
     csv_path = os.path.join(os.path.dirname(__file__), 'well_data.xlsx')
     if not os.path.exists(csv_path):
-        # Create sample data if file doesn't exist
-        raise FileNotFoundError(f"The data file '{csv_path}' was not found. Please ensure it is placed correctly.")
-    
+        raise FileNotFoundError(f"The data file '{csv_path}' was not found.")
+
     df_data = pd.read_excel(csv_path, engine='openpyxl')
-    
-    # Clean column names
     df_data.columns = df_data.columns.str.strip()
-    
-    # Handle missing values
     df_data = handle_missing_values(df_data)
-    
-    # Process asset and well mappings
+
     all_assets = df_data['FieldInstallationName'].unique().tolist()
     asset_well_map = {}
     well_asset_map = {}
-    
+
     for asset in all_assets:
         wells = df_data[df_data['FieldInstallationName'] == asset]['WellName'].unique().tolist()
         asset_well_map[asset] = wells
@@ -57,90 +50,62 @@ def load_and_process_data():
             well_asset_map[well] = asset
 
 def handle_missing_values(df):
-    """Handle missing values in the dataset"""
-    # Convert WorkCompletedOn to datetime
     df['WorkCompletedOn'] = pd.to_datetime(df['WorkCompletedOn'], errors='coerce')
-    
-    # Fill missing WorkCompletedOn with today's date
     df['WorkCompletedOn'].fillna(pd.Timestamp.now(), inplace=True)
-    
-    # Fill missing boolean fields
     df['Maintained'].fillna('FALSE', inplace=True)
     df['ManualOverride'].fillna('FALSE', inplace=True)
-    
-    # Fill missing TestResult with 'P' (assuming most tests pass)
     df['TestResult'].fillna('P', inplace=True)
-    
-    # Fill missing TestTypeCode with 'Standard'
     df['TestTypeCode'].fillna('Standard', inplace=True)
-    
-    # Fill missing pressure values with median values
     df['StartPressure'].fillna(df['StartPressure'].median(), inplace=True)
     df['FinishPressure'].fillna(df['FinishPressure'].median(), inplace=True)
-    
     return df
 
 def calculate_optimal_interval(intervals, failure_rate):
-    """Calculate optimal testing interval based on historical data and failure rate"""
     if not intervals or len(intervals) == 0:
-        return 90  # Default 90 days
-    
+        return 90
     avg_interval = np.mean(intervals)
-    
-    # Adjust based on failure rate
+    safety_factor = 0.9
     if failure_rate > 20:
-        safety_factor = 0.6  # Test more frequently for high failure rates
+        safety_factor = 0.6
     elif failure_rate > 10:
         safety_factor = 0.75
-    else:
-        safety_factor = 0.9
-    
-    optimal = avg_interval * safety_factor
-    return max(30, min(365, optimal))  # Between 30 and 365 days
+    return max(30, min(365, avg_interval * safety_factor))
 
 def train_ml_models():
-    """Train machine learning models for predictions"""
     global ml_model_optimal, ml_model_failure, scaler_optimal, scaler_failure
-    
+
     if df_data is None or len(df_data) == 0:
         return
-    
-    # Prepare features for ML models
+
     features_data = []
     target_optimal = []
     target_failure = []
-    
+
     for asset in all_assets:
         asset_data = df_data[df_data['FieldInstallationName'] == asset]
-        
+
         for well in asset_well_map[asset]:
             well_data = asset_data[asset_data['WellName'] == well].copy()
-            
-            if len(well_data) < 2:  # Need at least 2 records for intervals
+            if len(well_data) < 2:
                 continue
-            
+
             well_data = well_data.sort_values('WorkCompletedOn')
-            
-            # Calculate features
             total_tests = len(well_data)
             failed_tests = len(well_data[well_data['TestResult'] != 'P'])
             failure_rate = (failed_tests / total_tests) * 100
-            
-            # Calculate intervals
+
             dates = well_data['WorkCompletedOn'].tolist()
-            intervals = [(dates[i] - dates[i-1]).days for i in range(1, len(dates))]
-            
+            intervals = [(dates[i] - dates[i - 1]).days for i in range(1, len(dates))]
+
             if intervals:
                 avg_interval = np.mean(intervals)
                 max_interval = max(intervals)
                 min_interval = min(intervals)
                 std_interval = np.std(intervals)
-                
-                # Calculate pressure features
                 avg_start_pressure = well_data['StartPressure'].mean()
                 avg_finish_pressure = well_data['FinishPressure'].mean()
                 pressure_variance = well_data['StartPressure'].var()
-                
+
                 features = [
                     total_tests,
                     failure_rate,
@@ -152,53 +117,47 @@ def train_ml_models():
                     avg_finish_pressure,
                     pressure_variance
                 ]
-                
+
                 optimal_interval = calculate_optimal_interval(intervals, failure_rate)
-                
                 features_data.append(features)
                 target_optimal.append(optimal_interval)
                 target_failure.append(failure_rate)
-    
-    if len(features_data) > 5:  # Need sufficient data for training
+
+    if len(features_data) > 5:
         X = np.array(features_data)
         y_optimal = np.array(target_optimal)
         y_failure = np.array(target_failure)
-        
-        # Scale features
+
         scaler_optimal = StandardScaler()
         scaler_failure = StandardScaler()
         X_scaled_optimal = scaler_optimal.fit_transform(X)
         X_scaled_failure = scaler_failure.fit_transform(X)
-        
-        # Train models
+
         ml_model_optimal = RandomForestRegressor(n_estimators=100, random_state=42)
         ml_model_failure = RandomForestRegressor(n_estimators=100, random_state=42)
-        
+
         ml_model_optimal.fit(X_scaled_optimal, y_optimal)
         ml_model_failure.fit(X_scaled_failure, y_failure)
 
 def get_asset_overview(asset_name):
-    """Get overview statistics for an asset"""
     asset_data = df_data[df_data['FieldInstallationName'] == asset_name]
-    
     if asset_data.empty:
         return None
-    
+
     wells = asset_well_map.get(asset_name, [])
     total_tests = len(asset_data)
     failed_tests = len(asset_data[asset_data['TestResult'] != 'P'])
     success_tests = total_tests - failed_tests
-    
+
     failure_rate = (failed_tests / total_tests) * 100 if total_tests > 0 else 0
     success_rate = (success_tests / total_tests) * 100 if total_tests > 0 else 0
-    
-    # Calculate intervals for optimal days
+
     asset_data_sorted = asset_data.sort_values('WorkCompletedOn')
     dates = asset_data_sorted['WorkCompletedOn'].tolist()
-    intervals = [(dates[i] - dates[i-1]).days for i in range(1, len(dates))]
-    
+    intervals = [(dates[i] - dates[i - 1]).days for i in range(1, len(dates))]
+
     optimal_days = calculate_optimal_interval(intervals, failure_rate)
-    
+
     return {
         'asset_name': asset_name,
         'total_wells': len(wells),
@@ -212,36 +171,28 @@ def get_asset_overview(asset_name):
     }
 
 def get_well_details(well_name, asset_name):
-    """Get detailed analysis for a specific well"""
-    well_data = df_data[(df_data['WellName'] == well_name) & 
-                       (df_data['FieldInstallationName'] == asset_name)].copy()
-    
+    well_data = df_data[(df_data['WellName'] == well_name) &
+                        (df_data['FieldInstallationName'] == asset_name)].copy()
     if well_data.empty:
         return None
-    
+
     well_data = well_data.sort_values('WorkCompletedOn')
-    
     total_tests = len(well_data)
     failed_tests = len(well_data[well_data['TestResult'] != 'P'])
     failure_rate = (failed_tests / total_tests) * 100 if total_tests > 0 else 0
-    
-    # Calculate intervals
+
     dates = well_data['WorkCompletedOn'].tolist()
-    intervals = [(dates[i] - dates[i-1]).days for i in range(1, len(dates))]
-    
+    intervals = [(dates[i] - dates[i - 1]).days for i in range(1, len(dates))]
+
     optimal_days = calculate_optimal_interval(intervals, failure_rate)
-    
-    # Get last test date and calculate next due date
     last_test_date = dates[-1] if dates else datetime.now()
     next_due_date = last_test_date + timedelta(days=optimal_days)
-    
-    # ML Predictions
+
     ml_optimal_days = optimal_days
     ml_failure_rate = failure_rate
-    
+
     if ml_model_optimal and ml_model_failure and len(intervals) > 0:
         try:
-            # Prepare features for ML prediction
             avg_interval = np.mean(intervals)
             max_interval = max(intervals)
             min_interval = min(intervals)
@@ -249,29 +200,20 @@ def get_well_details(well_name, asset_name):
             avg_start_pressure = well_data['StartPressure'].mean()
             avg_finish_pressure = well_data['FinishPressure'].mean()
             pressure_variance = well_data['StartPressure'].var()
-            
-            features = np.array([[
-                total_tests,
-                failure_rate,
-                avg_interval,
-                max_interval,
-                min_interval,
-                std_interval,
-                avg_start_pressure,
-                avg_finish_pressure,
-                pressure_variance
-            ]])
-            
+
+            features = np.array([[total_tests, failure_rate, avg_interval, max_interval,
+                                  min_interval, std_interval, avg_start_pressure,
+                                  avg_finish_pressure, pressure_variance]])
+
             features_scaled_optimal = scaler_optimal.transform(features)
             features_scaled_failure = scaler_failure.transform(features)
-            
+
             ml_optimal_days = ml_model_optimal.predict(features_scaled_optimal)[0]
             ml_failure_rate = ml_model_failure.predict(features_scaled_failure)[0]
-            
+
         except Exception as e:
             print(f"ML prediction error: {e}")
-    
-    # Test history for visualization
+
     test_history = []
     for _, row in well_data.iterrows():
         test_history.append({
@@ -281,7 +223,7 @@ def get_well_details(well_name, asset_name):
             'start_pressure': row['StartPressure'],
             'finish_pressure': row['FinishPressure']
         })
-    
+
     return {
         'well_name': well_name,
         'asset_name': asset_name,
@@ -316,8 +258,6 @@ def retrain_models():
     train_ml_models()
     return jsonify({'status': 'success', 'message': 'Models retrained successfully'})
 
-@app.before_first_request
-def startup():
-    load_and_process_data()
-    train_ml_models()
-
+# ✅ SAFER INITIALIZATION FOR RENDER
+load_and_process_data()
+train_ml_models()
