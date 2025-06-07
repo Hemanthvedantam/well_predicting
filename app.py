@@ -31,7 +31,7 @@ def load_and_process_data():
     global df_data, all_assets, asset_well_map, well_asset_map
     
     # Read the CSV data
-    csv_path = 'well_data.csv'  # Update with your CSV path
+    csv_path = 'well_data.xlsx'  # Update with your CSV path
     if not os.path.exists(csv_path):
         # Create sample data if file doesn't exist
         raise FileNotFoundError(f"The data file '{csv_path}' was not found. Please ensure it is placed correctly.")
