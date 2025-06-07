@@ -32,12 +32,12 @@ def load_and_process_data():
     global df_data, all_assets, asset_well_map, well_asset_map
     
     # Read the CSV data
-    csv_path = 'well_data.xlsx'  # Update with your CSV path
+    csv_path = os.path.join(os.path.dirname(__file__), 'well_data.xlsx')
     if not os.path.exists(csv_path):
         # Create sample data if file doesn't exist
         raise FileNotFoundError(f"The data file '{csv_path}' was not found. Please ensure it is placed correctly.")
     
-    df_data = pd.read_xlsx(csv_path)
+    df_data = pd.read_excel(csv_path, engine='openpyxl')
     
     # Clean column names
     df_data.columns = df_data.columns.str.strip()
@@ -316,7 +316,8 @@ def retrain_models():
     train_ml_models()
     return jsonify({'status': 'success', 'message': 'Models retrained successfully'})
 
-if __name__ == '__main__':
+@app.before_first_request
+def startup():
     load_and_process_data()
     train_ml_models()
-    app.run(debug=True)
+
