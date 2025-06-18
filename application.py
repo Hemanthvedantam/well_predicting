@@ -44,6 +44,8 @@ def load_and_process_data():
         
         if not file_path:
             print("Warning: well_data.xlsx not found. Creating sample data...")
+            for path in possible_paths:
+                print(f"  - {path}")
             create_sample_data()
             return
             
@@ -114,7 +116,7 @@ def create_sample_data():
                 
                 # Random failure reasons
                 reasons = []
-                if sample_data[-1]['TestResult'] == 'F':
+                if sample_data and sample_data[-1]['TestResult'] == 'F':
                     reason_prob = np.random.random()
                     if reason_prob < 0.4:
                         reasons.append("degradation_of_pressure")
