@@ -1029,4 +1029,5 @@ def calculate_pressure_drop(asset_data):
 
 
 if __name__ == '__main__':
-    application.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
+    port = int(os.environ.get('PORT', 5000))  # EB provides PORT dynamically
+    application.run(debug=True, host='0.0.0.0', port=port, threaded=True)
