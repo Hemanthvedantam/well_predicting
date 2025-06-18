@@ -13,8 +13,8 @@ from datetime import datetime, timedelta
 
 warnings.filterwarnings('ignore')
 
-app = Flask(__name__)
-app.config['TEMPLATES_AUTO_RELOAD'] = True
+application = Flask(__name__)
+application.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Global variables
 data_lock = threading.Lock()
@@ -569,14 +569,14 @@ def generate_test_schedules(start_date, end_date, asset, well):
 # Initialize data on startup
 load_and_process_data()
 
-@app.route('/')
+@application.route('/')
 def index():
     """Render the main dashboard page"""
     return render_template('dashboard.html', 
                            min_date=min_date.strftime('%Y-%m-%d'),
                            max_date=max_date.strftime('%Y-%m-%d'))
 
-@app.route('/api/valve-analysis', methods=['POST'])
+@application.route('/api/valve-analysis', methods=['POST'])
 def valve_analysis():
     """API endpoint for valve analysis"""
     try:
@@ -589,7 +589,7 @@ def valve_analysis():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/asset-analysis', methods=['POST'])
+@application.route('/api/asset-analysis', methods=['POST'])
 def asset_analysis():
     """API endpoint for asset analysis"""
     try:
@@ -603,7 +603,7 @@ def asset_analysis():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/predictions', methods=['POST'])
+@application.route('/api/predictions', methods=['POST'])
 def predictions():
     """API endpoint for predictions with diverse reasons and recommendations"""
     try:
@@ -766,7 +766,7 @@ def predictions():
         print(f"Error in predictions: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/assets')
+@application.route('/api/assets')
 def get_assets():
     """API endpoint to get assets and wells"""
     return jsonify({
@@ -774,7 +774,7 @@ def get_assets():
         'asset_well_map': asset_well_map
     })
 
-@app.route('/api/test-scheduler', methods=['POST'])
+@application.route('/api/test-scheduler', methods=['POST'])
 def test_scheduler():
     """API endpoint for test scheduler"""
     try:
@@ -789,7 +789,7 @@ def test_scheduler():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/valve-scheduler', methods=['POST'])
+@application.route('/api/valve-scheduler', methods=['POST'])
 def valve_scheduler():
     """API endpoint for valve test scheduler"""
     try:
@@ -1027,4 +1027,4 @@ def calculate_pressure_drop(asset_data):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
+    application.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
